@@ -1,4 +1,4 @@
-import type { User } from "@/types";
+import type { User, GameState, GameLobby, UserStats, GameHistoryEntry, LeaderboardEntry } from "@/types";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://word-search.local:3001";
@@ -76,11 +76,11 @@ class ApiClient {
   }
 
   async listGames() {
-    return this.request<{ id: string; theme: string; difficulty: string; host: string; player_count: number; max_players: number }[]>("/api/games");
+    return this.request<GameLobby[]>("/api/games");
   }
 
   async getGame(id: string) {
-    return this.request<Record<string, unknown>>(`/api/games/${id}`);
+    return this.request<GameState>(`/api/games/${id}`);
   }
 
   async joinGame(id: string) {
@@ -100,18 +100,18 @@ class ApiClient {
   }
 
   // Stats
-  async getLeaderboard(page = 1, limit = 20) {
-    return this.request<{ entries: unknown[]; total: number }>(
+  async getLeaderboard(page = 1, limit = 25) {
+    return this.request<{ entries: LeaderboardEntry[]; total: number }>(
       `/api/stats/leaderboard?page=${page}&limit=${limit}`
     );
   }
 
   async getMyStats() {
-    return this.request<Record<string, unknown>>("/api/stats/me");
+    return this.request<UserStats>("/api/stats/me");
   }
 
   async getMyHistory(page = 1, limit = 20) {
-    return this.request<{ entries: unknown[]; total: number }>(
+    return this.request<{ entries: GameHistoryEntry[]; total: number }>(
       `/api/stats/me/history?page=${page}&limit=${limit}`
     );
   }
@@ -124,7 +124,7 @@ class ApiClient {
   }
 
   async serverInfo() {
-    return this.request<Record<string, unknown>>("/api/discover/info");
+    return this.request<{ hostname: string; port: number; active_games: number; players_online: number }>("/api/discover/info");
   }
 }
 

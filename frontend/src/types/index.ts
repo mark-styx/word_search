@@ -99,3 +99,21 @@ export interface GameHistoryEntry {
   words_found: number;
   finished_at: string;
 }
+
+// WebSocket message types
+export type ClientMessage =
+  | { type: "select_cells"; cells: { row: number; col: number }[] }
+  | { type: "chat"; text: string }
+  | { type: "ready" }
+  | { type: "leave_game" };
+
+export type ServerMessage =
+  | { type: "player_joined"; player_id: string; username: string }
+  | { type: "player_left"; player_id: string }
+  | { type: "player_ready"; player_id: string }
+  | { type: "game_starting" }
+  | { type: "word_found"; player_id: string; word: string; score: number }
+  | { type: "game_finished"; winner_id: string }
+  | { type: "player_score_update"; player_id: string; score: number }
+  | { type: "chat_message"; username: string; text: string }
+  | { type: "error"; message: string };
