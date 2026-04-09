@@ -3,6 +3,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use word_search_backend::api;
 use word_search_backend::db::repository;
+use word_search_backend::discovery::advertise::MdnsAdvertiser;
 
 #[tokio::main]
 async fn main() {
@@ -30,6 +31,18 @@ async fn main() {
 
     tracing::info!("Database initialized at {}", db_path);
 
+    // Start mDNS advertiser
+    let mdns = match MdnsAdvertiser::new(port) {
+        Ok(m) => {
+            tracing::info!("mDNS advertiser started");
+            Some(m)
+        }
+        Err(e) => {
+            tracing::warn!("mDNS advertiser failed to start: {}", e);
+            None
+        }
+    };
+
     // In-memory game rooms
     let rooms: api::GameRooms = Arc::new(RwLock::new(HashMap::new()));
 
@@ -43,6 +56,9 @@ async fn main() {
         .with_graceful_shutdown(shutdown_signal())
         .await
         .unwrap();
+
+    // Clean up mDNS
+    drop(mdns);
 }
 
 async fn shutdown_signal() {
