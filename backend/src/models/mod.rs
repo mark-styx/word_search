@@ -148,3 +148,46 @@ pub struct GameState {
     pub time_limit: Option<Duration>,
     pub max_players: usize,
 }
+
+// ── WebSocket message protocol ──────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ClientMessage {
+    SelectCells { cells: Vec<(usize, usize)> },
+    Chat { message: String },
+    Ready,
+    LeaveGame,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ServerMessage {
+    PlayerJoined { player: PlayerState },
+    PlayerLeft { player_id: Uuid },
+    PlayerReady { player_id: Uuid },
+    GameStarting {
+        grid: Grid,
+        words_to_find: Vec<String>,
+        time_limit: Option<u64>,
+    },
+    WordFound {
+        player_id: Uuid,
+        word: String,
+        score: u32,
+    },
+    GameFinished {
+        rankings: Vec<PlayerState>,
+    },
+    PlayerScoreUpdate {
+        player_id: Uuid,
+        score: u32,
+        found_count: usize,
+    },
+    ChatMessage {
+        player_id: Uuid,
+        message: String,
+        timestamp: DateTime<Utc>,
+    },
+    Error { message: String },
+}

@@ -3155,6 +3155,7 @@ dependencies = [
  "axum",
  "chrono",
  "dotenvy",
+ "futures-util",
  "hostname",
  "jsonwebtoken",
  "mdns",
