@@ -58,6 +58,10 @@ struct HistoryResponse {
 pub fn routes() -> Router {
     Router::new()
         .route("/leaderboard", get(leaderboard))
+}
+
+pub fn protected_routes() -> Router {
+    Router::new()
         .route("/me", get(my_stats))
         .route("/me/history", get(my_history))
 }

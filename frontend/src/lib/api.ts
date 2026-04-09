@@ -31,7 +31,7 @@ class ApiClient {
     });
     if (res.status === 401) {
       clearTokens();
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !window.location.pathname.match(/\/(login|register)$/)) {
         window.location.href = "/login";
       }
       throw new Error("Unauthorized");

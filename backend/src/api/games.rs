@@ -15,7 +15,6 @@ use crate::models::{Difficulty, GameState, GameStatus, PlayerState, WordTheme};
 use crate::puzzles::catalog;
 
 use crate::api::GameRooms;
-
 #[derive(Deserialize)]
 struct CreateGameRequest {
     theme: WordTheme,
@@ -30,14 +29,33 @@ struct GameResponse {
 }
 
 #[derive(Serialize)]
+struct GridResponse {
+    cells: Vec<Vec<String>>,
+    width: usize,
+    height: usize,
+    placed_words: Vec<PlacedWordResponse>,
+}
+
+#[derive(Serialize)]
+struct PlacedWordResponse {
+    word: String,
+    start: (usize, usize),
+    end: (usize, usize),
+    direction: String,
+}
+
+#[derive(Serialize)]
 struct GameDetailResponse {
     id: String,
+    grid: Option<GridResponse>,
     theme: String,
     difficulty: String,
     status: String,
     players: Vec<PlayerInfo>,
+    found_words: HashMap<String, Vec<String>>,
     max_players: usize,
     time_limit_secs: Option<u64>,
+    started_at: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -171,9 +189,20 @@ async fn get_game(
 
     Ok(Json(GameDetailResponse {
         id: game.id.to_string(),
-        theme: format!("{:?}", game.theme),
-        difficulty: format!("{:?}", game.difficulty),
-        status: format!("{:?}", game.status).to_lowercase(),
+        grid: game.grid.as_ref().map(|g| GridResponse {
+            cells: g.cells.iter().map(|row| row.iter().map(|c| c.to_string()).collect()).collect(),
+            width: g.width,
+            height: g.height,
+            placed_words: g.placed_words.iter().map(|pw| PlacedWordResponse {
+                word: pw.word.clone(),
+                start: pw.start,
+                end: pw.end,
+                direction: serde_json::to_value(&pw.direction).unwrap().as_str().unwrap().to_string(),
+            }).collect(),
+        }),
+        theme: serde_json::to_value(&game.theme).unwrap().as_str().unwrap().to_string(),
+        difficulty: serde_json::to_value(&game.difficulty).unwrap().as_str().unwrap().to_string(),
+        status: serde_json::to_value(&game.status).unwrap().as_str().unwrap().to_string(),
         players: game
             .players
             .values()
@@ -184,8 +213,14 @@ async fn get_game(
                 is_host: p.is_host,
             })
             .collect(),
+        found_words: game
+            .found_words
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.clone()))
+            .collect(),
         max_players: game.max_players,
         time_limit_secs: game.time_limit.map(|d| d.as_secs()),
+        started_at: game.started_at.map(|dt| dt.to_rfc3339()),
     }))
 }
 
@@ -210,7 +245,8 @@ async fn join_game(
         return Err((StatusCode::CONFLICT, "Game is full".into()));
     }
     if game.players.contains_key(&user_uuid) {
-        return Err((StatusCode::CONFLICT, "Already in this game".into()));
+        // Already in game - return success (idempotent)
+        return Ok(Json(GameResponse { id: game_id.to_string() }));
     }
 
     game.players.insert(
@@ -262,7 +298,11 @@ async fn start_game(
     }
 
     // Generate the puzzle grid
-    let words = catalog::get_words(game.theme, game.difficulty.word_count());
+    let words = catalog::get_words(
+        game.theme,
+        game.difficulty.word_count(),
+        Some(game.difficulty.grid_size()),
+    );
     let grid = generate_grid(&words, game.difficulty)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -288,7 +328,7 @@ async fn solo_game(
     let theme = WordTheme::Science; // default for solo; could be configurable
     let difficulty = Difficulty::Medium;
 
-    let words = catalog::get_words(theme, difficulty.word_count());
+    let words = catalog::get_words(theme, difficulty.word_count(), Some(difficulty.grid_size()));
     let grid = generate_grid(&words, difficulty)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
