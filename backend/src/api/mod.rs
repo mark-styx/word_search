@@ -5,10 +5,21 @@ pub mod games;
 pub mod stats;
 
 use axum::Router;
-use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::TraceLayer;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use uuid::Uuid;
 
-pub fn create_router() -> Router {
+use crate::db::repository::DbPool;
+use crate::models::GameState;
+
+/// Shared in-memory game state.
+pub type GameRooms = Arc<RwLock<HashMap<Uuid, GameState>>>;
+
+pub fn create_router(pool: DbPool, rooms: GameRooms) -> Router {
+    use tower_http::cors::{Any, CorsLayer};
+    use tower_http::trace::TraceLayer;
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -21,4 +32,6 @@ pub fn create_router() -> Router {
         .nest("/api/discover", discovery::routes())
         .layer(TraceLayer::new_for_http())
         .layer(cors)
+        .layer(axum::extract::Extension(pool))
+        .layer(axum::extract::Extension(rooms))
 }

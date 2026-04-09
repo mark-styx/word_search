@@ -1,4 +1,8 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use word_search_backend::api;
+use word_search_backend::db::repository;
 
 #[tokio::main]
 async fn main() {
@@ -12,7 +16,24 @@ async fn main() {
         .parse()
         .expect("Invalid PORT");
 
-    let app = api::create_router();
+    let db_path = std::env::var("DATABASE_PATH")
+        .unwrap_or_else(|_| "./data/wordsearch.db".into());
+
+    // Initialize database
+    let pool = repository::create_pool(&db_path)
+        .await
+        .expect("Failed to create database pool");
+
+    repository::run_migrations(&pool)
+        .await
+        .expect("Failed to run migrations");
+
+    tracing::info!("Database initialized at {}", db_path);
+
+    // In-memory game rooms
+    let rooms: api::GameRooms = Arc::new(RwLock::new(HashMap::new()));
+
+    let app = api::create_router(pool, rooms);
 
     let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("Server listening on {}", addr);
