@@ -38,6 +38,10 @@ pub fn routes() -> Router {
     Router::new()
         .route("/register", post(register))
         .route("/login", post(login))
+}
+
+pub fn protected_routes() -> Router {
+    Router::new()
         .route("/me", get(me))
 }
 

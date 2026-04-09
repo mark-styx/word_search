@@ -36,25 +36,32 @@ pub fn create_router(pool: DbPool, rooms: GameRooms) -> Router {
         channels,
     };
 
+    let auth_mw = axum::middleware::from_fn(crate::auth::auth_middleware);
+
     // Stateful routes (WebSocket)
     let ws_routes = Router::new()
         .route("/ws", axum::routing::get(crate::ws::handler::ws_upgrade))
         .with_state(ws_state);
 
-    // Extension-based routes (REST API)
-    let public_routes = Router::new()
-        .nest("/api/auth", auth::routes())
-        .nest("/api/discover", discovery::routes())
-        .nest("/api/games", games::public_routes());
+    // Each prefix gets one nest() call; public and protected routes are merged
+    // with auth middleware applied only to protected branches.
+    let games_router = Router::new()
+        .merge(games::public_routes())
+        .merge(games::protected_routes().layer(auth_mw.clone()));
 
-    let protected_routes = Router::new()
-        .nest("/api/games", games::protected_routes())
-        .nest("/api/stats", stats::routes())
-        .layer(axum::middleware::from_fn(crate::auth::auth_middleware));
+    let auth_router = Router::new()
+        .merge(auth::routes())
+        .merge(auth::protected_routes().layer(auth_mw.clone()));
+
+    let stats_router = Router::new()
+        .merge(stats::routes())
+        .merge(stats::protected_routes().layer(auth_mw));
 
     let api_routes = Router::new()
-        .merge(public_routes)
-        .merge(protected_routes)
+        .nest("/api/auth", auth_router)
+        .nest("/api/discover", discovery::routes())
+        .nest("/api/games", games_router)
+        .nest("/api/stats", stats_router)
         .layer(axum::extract::Extension(pool))
         .layer(axum::extract::Extension(rooms));
 
