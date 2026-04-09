@@ -58,14 +58,18 @@ struct LobbyEntry {
     max_players: usize,
 }
 
-pub fn routes() -> Router {
+pub fn public_routes() -> Router {
+    Router::new()
+        .route("/:id", get(get_game))
+        .route("/", get(list_games))
+}
+
+pub fn protected_routes() -> Router {
     Router::new()
         .route("/solo", get(solo_game))
-        .route("/:id", get(get_game))
         .route("/:id/join", post(join_game))
         .route("/:id/start", post(start_game))
         .route("/", post(create_game))
-        .route("/", get(list_games))
 }
 
 async fn create_game(

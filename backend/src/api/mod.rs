@@ -42,11 +42,19 @@ pub fn create_router(pool: DbPool, rooms: GameRooms) -> Router {
         .with_state(ws_state);
 
     // Extension-based routes (REST API)
-    let api_routes = Router::new()
+    let public_routes = Router::new()
         .nest("/api/auth", auth::routes())
-        .nest("/api/games", games::routes())
-        .nest("/api/stats", stats::routes())
         .nest("/api/discover", discovery::routes())
+        .nest("/api/games", games::public_routes());
+
+    let protected_routes = Router::new()
+        .nest("/api/games", games::protected_routes())
+        .nest("/api/stats", stats::routes())
+        .layer(axum::middleware::from_fn(crate::auth::auth_middleware));
+
+    let api_routes = Router::new()
+        .merge(public_routes)
+        .merge(protected_routes)
         .layer(axum::extract::Extension(pool))
         .layer(axum::extract::Extension(rooms));
 
