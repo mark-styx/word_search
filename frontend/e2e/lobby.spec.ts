@@ -27,7 +27,7 @@ test.describe("Lobby page", () => {
     // Either empty state or game cards shown (shared DB)
     const main = page.locator("main");
     await expect(
-      main.getByText("No active games right now").or(main.getByText(/Host:/))
+      main.getByText("No active games right now").or(main.getByText(/Host:/).first())
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -81,10 +81,11 @@ test.describe("Lobby page", () => {
     const gameId = await createGameApi(token);
     await page.goto("/lobby");
 
-    // Click the game card with this user as host
-    const hostText = page.getByText(`Host: e2e_join_${suffix}`);
-    await expect(hostText).toBeVisible({ timeout: 10_000 });
-    await hostText.click();
+    // Click the game card (div[role="button"]) with this user as host
+    const username = `e2e_join_${suffix}`;
+    const gameCard = page.getByRole("button", { name: new RegExp(`Host: ${username}`) });
+    await expect(gameCard).toBeVisible({ timeout: 10_000 });
+    await gameCard.click();
 
     await expect(page).toHaveURL(/\/game\//, { timeout: 15_000 });
   });

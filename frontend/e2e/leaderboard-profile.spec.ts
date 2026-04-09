@@ -76,7 +76,7 @@ test.describe("Profile page", () => {
 
     // Either "No stats yet" or actual stats display
     const main = page.locator("main");
-    await expect(main.getByText(/No stats yet|Games Played|total_games/i)).toBeVisible({ timeout: 10_000 });
+    await expect(main.getByText(/No stats yet|Games Played/).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("shows link to full leaderboard", async ({ page }) => {

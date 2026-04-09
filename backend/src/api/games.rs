@@ -245,7 +245,8 @@ async fn join_game(
         return Err((StatusCode::CONFLICT, "Game is full".into()));
     }
     if game.players.contains_key(&user_uuid) {
-        return Err((StatusCode::CONFLICT, "Already in this game".into()));
+        // Already in game - return success (idempotent)
+        return Ok(Json(GameResponse { id: game_id.to_string() }));
     }
 
     game.players.insert(
@@ -297,7 +298,11 @@ async fn start_game(
     }
 
     // Generate the puzzle grid
-    let words = catalog::get_words(game.theme, game.difficulty.word_count());
+    let words = catalog::get_words(
+        game.theme,
+        game.difficulty.word_count(),
+        Some(game.difficulty.grid_size()),
+    );
     let grid = generate_grid(&words, game.difficulty)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
@@ -323,7 +328,7 @@ async fn solo_game(
     let theme = WordTheme::Science; // default for solo; could be configurable
     let difficulty = Difficulty::Medium;
 
-    let words = catalog::get_words(theme, difficulty.word_count());
+    let words = catalog::get_words(theme, difficulty.word_count(), Some(difficulty.grid_size()));
     let grid = generate_grid(&words, difficulty)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 

@@ -16,10 +16,18 @@ pub fn get_all_words(theme: WordTheme) -> &'static [&'static str] {
     }
 }
 
-pub fn get_words(theme: WordTheme, count: usize) -> Vec<String> {
+pub fn get_words(theme: WordTheme, count: usize, max_len: Option<usize>) -> Vec<String> {
     let all = get_all_words(theme);
     let mut rng = rand::thread_rng();
-    let mut indices: Vec<usize> = (0..all.len()).collect();
+    let mut indices: Vec<usize> = if let Some(max) = max_len {
+        all.iter()
+            .enumerate()
+            .filter(|(_, w)| w.len() <= max)
+            .map(|(i, _)| i)
+            .collect()
+    } else {
+        (0..all.len()).collect()
+    };
     indices.shuffle(&mut rng);
     indices
         .into_iter()
@@ -100,15 +108,28 @@ mod tests {
     #[test]
     fn get_words_returns_correct_count() {
         for theme in all_themes() {
-            let result = get_words(theme, 10);
+            let result = get_words(theme, 10, None);
             assert_eq!(result.len(), 10, "Theme {:?}", theme);
         }
     }
 
     #[test]
     fn get_words_no_duplicates() {
-        let result = get_words(WordTheme::Animals, 20);
+        let result = get_words(WordTheme::Animals, 20, None);
         let set: std::collections::HashSet<_> = result.iter().collect();
         assert_eq!(set.len(), 20);
+    }
+
+    #[test]
+    fn get_words_respects_max_len() {
+        let result = get_words(WordTheme::Animals, 6, Some(8));
+        for word in &result {
+            assert!(
+                word.len() <= 8,
+                "Word '{}' has length {} which exceeds max_len 8",
+                word,
+                word.len()
+            );
+        }
     }
 }

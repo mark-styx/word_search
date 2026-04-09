@@ -490,7 +490,7 @@ async fn join_game_already_in_game() {
         .unwrap()
         .to_string();
 
-    // Host tries to join their own game (already in it)
+    // Host tries to join their own game (already in it) - idempotent, returns 200
     let req = Request::builder()
         .method("POST")
         .uri(&format!("/api/games/{}/join", game_id))
@@ -498,7 +498,7 @@ async fn join_game_already_in_game() {
         .body(Body::empty())
         .unwrap();
     let resp = app.clone().oneshot(req).await.unwrap();
-    assert_eq!(resp.status(), StatusCode::CONFLICT);
+    assert_eq!(resp.status(), StatusCode::OK);
 }
 
 #[tokio::test]
