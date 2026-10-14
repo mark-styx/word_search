@@ -111,10 +111,7 @@ fn try_place_word(
     let end_row = start_row as isize + dr * (len as isize - 1);
     let end_col = start_col as isize + dc * (len as isize - 1);
 
-    if end_row < 0
-        || end_row >= grid_size as isize
-        || end_col < 0
-        || end_col >= grid_size as isize
+    if end_row < 0 || end_row >= grid_size as isize || end_col < 0 || end_col >= grid_size as isize
     {
         return None;
     }
@@ -161,6 +158,13 @@ pub fn validate_selection(grid: &Grid, cells: Vec<(usize, usize)>) -> Option<Str
         if cells[i].0 as isize != expected_r || cells[i].1 as isize != expected_c {
             return None;
         }
+    }
+
+    if cells
+        .iter()
+        .any(|&(row, col)| row >= grid.height || col >= grid.width)
+    {
+        return None;
     }
 
     // Build the string from selected cells
@@ -374,8 +378,7 @@ mod tests {
     #[test]
     fn reverse_direction_out_of_bounds_is_rejected() {
         let cells = vec![vec![EMPTY_CELL; 5]; 5];
-        let result =
-            try_place_word("HELLO", 2, 1, WordDirection::ReverseHorizontal, &cells, 5);
+        let result = try_place_word("HELLO", 2, 1, WordDirection::ReverseHorizontal, &cells, 5);
         assert!(result.is_none());
     }
 
@@ -391,13 +394,8 @@ mod tests {
 
     #[test]
     fn validate_selection_returns_word_for_correct_line() {
-        let mut grid = grid_from_rows(&[
-            "CATXXXXX",
-            "OXXXXXXX",
-            "DEFGXXXX",
-            "XXXXXXXX",
-            "XXXXXXXX",
-        ]);
+        let mut grid =
+            grid_from_rows(&["CATXXXXX", "OXXXXXXX", "DEFGXXXX", "XXXXXXXX", "XXXXXXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "CAT".to_string(),
             start: (0, 0),
@@ -406,20 +404,12 @@ mod tests {
         });
 
         let cells = vec![(0, 0), (0, 1), (0, 2)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("CAT".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("CAT".to_string()));
     }
 
     #[test]
     fn validate_selection_forward_word() {
-        let mut grid = grid_from_rows(&[
-            "CXXXXXXX",
-            "OXXXXXXX",
-            "DXXXXXXX",
-            "EXXXXXXX",
-        ]);
+        let mut grid = grid_from_rows(&["CXXXXXXX", "OXXXXXXX", "DXXXXXXX", "EXXXXXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "CODE".to_string(),
             start: (0, 0),
@@ -428,20 +418,12 @@ mod tests {
         });
 
         let cells = vec![(0, 0), (1, 0), (2, 0), (3, 0)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("CODE".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("CODE".to_string()));
     }
 
     #[test]
     fn validate_selection_reverse_word() {
-        let mut grid = grid_from_rows(&[
-            "CXXXXXXX",
-            "OXXXXXXX",
-            "DXXXXXXX",
-            "EXXXXXXX",
-        ]);
+        let mut grid = grid_from_rows(&["CXXXXXXX", "OXXXXXXX", "DXXXXXXX", "EXXXXXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "CODE".to_string(),
             start: (0, 0),
@@ -450,20 +432,12 @@ mod tests {
         });
 
         let cells = vec![(3, 0), (2, 0), (1, 0), (0, 0)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("CODE".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("CODE".to_string()));
     }
 
     #[test]
     fn validate_selection_diagonal_down_right() {
-        let mut grid = grid_from_rows(&[
-            "AXXXXXXX",
-            "XBXXXXXX",
-            "XXCXXXXX",
-            "XXXXXXXX",
-        ]);
+        let mut grid = grid_from_rows(&["AXXXXXXX", "XBXXXXXX", "XXCXXXXX", "XXXXXXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "ABC".to_string(),
             start: (0, 0),
@@ -472,20 +446,12 @@ mod tests {
         });
 
         let cells = vec![(0, 0), (1, 1), (2, 2)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("ABC".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("ABC".to_string()));
     }
 
     #[test]
     fn validate_selection_diagonal_down_left() {
-        let mut grid = grid_from_rows(&[
-            "XXXXXXAX",
-            "XXXXXBXX",
-            "XXXXCXXX",
-            "XXXXXXXX",
-        ]);
+        let mut grid = grid_from_rows(&["XXXXXXAX", "XXXXXBXX", "XXXXCXXX", "XXXXXXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "ABC".to_string(),
             start: (0, 6),
@@ -494,10 +460,7 @@ mod tests {
         });
 
         let cells = vec![(0, 6), (1, 5), (2, 4)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("ABC".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("ABC".to_string()));
     }
 
     #[test]
@@ -511,20 +474,12 @@ mod tests {
         });
 
         let cells = vec![(0, 1), (0, 2), (0, 3)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("CAT".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("CAT".to_string()));
     }
 
     #[test]
     fn validate_selection_reverse_vertical() {
-        let mut grid = grid_from_rows(&[
-            "XXXXXXXX",
-            "XXTXXXXX",
-            "XXAXXXXX",
-            "XXCXXXXX",
-        ]);
+        let mut grid = grid_from_rows(&["XXXXXXXX", "XXTXXXXX", "XXAXXXXX", "XXCXXXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "CAT".to_string(),
             start: (3, 2),
@@ -533,20 +488,12 @@ mod tests {
         });
 
         let cells = vec![(1, 2), (2, 2), (3, 2)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("CAT".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("CAT".to_string()));
     }
 
     #[test]
     fn validate_selection_reverse_diagonal_down_right() {
-        let mut grid = grid_from_rows(&[
-            "XXXXXXXX",
-            "XXXXXCXX",
-            "XXXXBXXX",
-            "XXXAXXXX",
-        ]);
+        let mut grid = grid_from_rows(&["XXXXXXXX", "XXXXXCXX", "XXXXBXXX", "XXXAXXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "ABC".to_string(),
             start: (3, 3),
@@ -555,20 +502,12 @@ mod tests {
         });
 
         let cells = vec![(1, 5), (2, 4), (3, 3)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("ABC".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("ABC".to_string()));
     }
 
     #[test]
     fn validate_selection_reverse_diagonal_down_left() {
-        let mut grid = grid_from_rows(&[
-            "XXXXXXXX",
-            "XXCXXXXX",
-            "XXXBXXXX",
-            "XXXXAXXX",
-        ]);
+        let mut grid = grid_from_rows(&["XXXXXXXX", "XXCXXXXX", "XXXBXXXX", "XXXXAXXX"]);
         grid.placed_words.push(PlacedWord {
             word: "ABC".to_string(),
             start: (3, 4),
@@ -577,10 +516,7 @@ mod tests {
         });
 
         let cells = vec![(1, 2), (2, 3), (3, 4)];
-        assert_eq!(
-            validate_selection(&grid, cells),
-            Some("ABC".to_string())
-        );
+        assert_eq!(validate_selection(&grid, cells), Some("ABC".to_string()));
     }
 
     // ── Edge cases ──────────────────────────────────────────────────────
@@ -637,6 +573,20 @@ mod tests {
         assert_eq!(validate_selection(&grid, cells), None);
     }
 
+    #[test]
+    fn out_of_bounds_selection_returns_none_instead_of_panicking() {
+        let mut grid = grid_from_rows(&["CAT", "DOG", "SUN"]);
+        grid.placed_words.push(PlacedWord {
+            word: "CAT".to_string(),
+            start: (0, 0),
+            end: (0, 2),
+            direction: WordDirection::Horizontal,
+        });
+
+        let cells = vec![(0, 0), (0, 1), (0, 9)];
+        assert_eq!(validate_selection(&grid, cells), None);
+    }
+
     // ── Helpers for assertions ──────────────────────────────────────────
 
     fn assert_no_empty_cells(grid: &Grid) {
@@ -651,11 +601,7 @@ mod tests {
     }
 
     fn assert_all_words_placed(grid: &Grid, words: &[String]) {
-        let placed: Vec<String> = grid
-            .placed_words
-            .iter()
-            .map(|pw| pw.word.clone())
-            .collect();
+        let placed: Vec<String> = grid.placed_words.iter().map(|pw| pw.word.clone()).collect();
         for word in words {
             assert!(
                 placed.iter().any(|p| p.eq_ignore_ascii_case(word)),

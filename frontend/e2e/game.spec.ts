@@ -18,9 +18,9 @@ test.describe("Game page", () => {
 
     await page.goto("/game/00000000-0000-0000-0000-000000000000");
 
-    // App renders error in main - could be "HTTP 404" or "Failed to fetch"
+    // App renders a friendly not-found state in main.
     await expect(
-      page.locator("main").locator("text=/HTTP 404|Failed to fetch/i")
+      page.locator("main").locator("text=/Game not found|HTTP 404|Failed to fetch/i")
     ).toBeVisible({ timeout: 10_000 });
   });
 
@@ -89,7 +89,7 @@ test.describe("Game page", () => {
     await expect(cells.first()).toBeVisible({ timeout: 15_000 });
 
     // Theme + difficulty shown in header area
-    await expect(page.locator("main").getByText("science")).toBeVisible();
+    await expect(page.locator("main").getByText("Science")).toBeVisible();
     await expect(page.locator("main").getByText("medium")).toBeVisible();
   });
 

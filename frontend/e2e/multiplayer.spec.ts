@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
-  registerAndAuth,
+  setAuth,
   uniqueSuffix,
   createGameApi,
   joinGameApi,
@@ -32,15 +32,13 @@ test.describe("Multiplayer game flow", () => {
     // Open host's game page
     const hostCtx = await browser.newContext();
     const hostPage = await hostCtx.newPage();
-    await hostPage.goto("/");
-    await hostPage.evaluate((t) => localStorage.setItem("access_token", t), hostToken);
+    await setAuth(hostPage, hostToken);
     await hostPage.goto(`/game/${gameId}`);
 
     // Open guest's game page
     const guestCtx = await browser.newContext();
     const guestPage = await guestCtx.newPage();
-    await guestPage.goto("/");
-    await guestPage.evaluate((t) => localStorage.setItem("access_token", t), guestToken);
+    await setAuth(guestPage, guestToken);
     await guestPage.goto(`/game/${gameId}`);
 
     // Both should see the game grid
@@ -75,8 +73,7 @@ test.describe("Multiplayer game flow", () => {
     // Host opens game page (lobby state, not started)
     const hostCtx = await browser.newContext();
     const hostPage = await hostCtx.newPage();
-    await hostPage.goto("/");
-    await hostPage.evaluate((t) => localStorage.setItem("access_token", t), hostToken);
+    await setAuth(hostPage, hostToken);
 
     await hostPage.goto(`/game/${gameId}`);
     await expect(hostPage.getByText("Waiting for players")).toBeVisible({ timeout: 10_000 });

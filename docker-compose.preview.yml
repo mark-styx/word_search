@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: word-search-backend-preview
+    environment:
+      - DATABASE_PATH=/app/data/wordsearch-preview.db
+      - PORT=4199
+      - HOST=0.0.0.0
+      - FRONTEND_PORT=4189
+      - PUBLIC_FRONTEND_URL=http://127.0.0.1:4189
+      - JWT_SECRET=${JWT_SECRET:-}
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - backend-data:/app/data
+    ports:
+      - "4199:4199"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_PORT: 4199
+    container_name: word-search-frontend-preview
+    environment:
+      - PORT=4189
+      - HOSTNAME=0.0.0.0
+      - INTERNAL_API_BASE_URL=http://backend:4199
+      - NEXT_PUBLIC_API_PORT=4199
+    depends_on:
+      - backend
+    ports:
+      - "4189:4189"
+    restart: unless-stopped
+
+volumes:
+  backend-data:
+    name: word-search-preview_backend-data

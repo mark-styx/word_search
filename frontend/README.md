@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frontend
 
-## Getting Started
+Next.js client for the Word Search LAN Party app.
 
-First, run the development server:
+## LAN Docker Runtime
+
+The primary hosted-play path is the root Compose stack:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cd ..
+docker compose up --build -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+That serves:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- frontend on `3089`
+- backend on `3099`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The browser uses the page host for API calls, while the Next server uses `INTERNAL_API_BASE_URL` inside the container network.
 
-## Learn More
+## Development
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+cd frontend
+npm install
+NEXT_PUBLIC_API_URL=http://localhost:3001 npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open `http://localhost:3000`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The frontend expects a running backend. For normal local development that backend is usually:
 
-## Deploy on Vercel
+```bash
+PORT=3001 cargo run --manifest-path ../backend/Cargo.toml
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Production-Style Local Start
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Use this for LAN/device testing so the app behaves like a built deployment:
+
+```bash
+cd frontend
+npm run build
+PORT=3089 HOSTNAME=0.0.0.0 npm run start:standalone
+```
+
+`start:standalone` copies the built static assets and `public/` files into the Next standalone output before starting `server.js`.
+
+## Test Commands
+
+```bash
+npm run build
+npx playwright test
+```
+
+Playwright uses:
+
+- backend on `3099`
+- frontend on `3089`
+
+## Notes
+
+- Browser-side API resolution is LAN-safe and avoids `localhost` when the page is opened from a remote device
+- The login flow uses the server-backed player directory
+- Service worker/PWA caching is disabled in development to avoid stale client bundles during active iteration
+
+See the repo root [README](../README.md) for the full project overview.

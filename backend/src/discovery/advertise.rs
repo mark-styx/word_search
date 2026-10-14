@@ -22,7 +22,8 @@ impl MdnsAdvertiser {
         let mut properties: HashMap<String, String> = HashMap::new();
         properties.insert("version".into(), "1.0".into());
         properties.insert("game".into(), "word-search".into());
-        properties.insert("path".into(), "/".into());
+        properties.insert("path".into(), "/login".into());
+        properties.insert("frontend_port".into(), std::env::var("FRONTEND_PORT").unwrap_or_else(|_| "3089".into()));
 
         let service_info = ServiceInfo::new(
             SERVICE_TYPE,
@@ -44,7 +45,8 @@ impl MdnsAdvertiser {
     }
 
     pub fn stop(&self) -> Result<(), Box<dyn std::error::Error>> {
-        self.daemon.unregister(&format!("{}.{}", self.service_name, SERVICE_TYPE))?;
+        self.daemon
+            .unregister(&format!("{}.{}", self.service_name, SERVICE_TYPE))?;
         tracing::info!("mDNS service unregistered");
         Ok(())
     }

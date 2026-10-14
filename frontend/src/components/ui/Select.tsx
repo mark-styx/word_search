@@ -2,21 +2,28 @@
 
 import { SelectHTMLAttributes, forwardRef } from "react";
 
-interface SelectOption {
+export interface SelectOption {
   value: string;
   label: string;
+}
+
+export interface SelectOptionGroup {
+  label: string;
+  options: SelectOption[];
 }
 
 interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "children"> {
   label?: string;
   error?: string;
   options: SelectOption[];
+  groups?: SelectOptionGroup[];
   placeholder?: string;
 }
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, options, placeholder, className = "", id, ...props }, ref) => {
+  ({ label, error, options, groups, placeholder, className = "", id, ...props }, ref) => {
     const selectId = id || label?.toLowerCase().replace(/\s+/g, "-");
+    const groupedOptions = groups?.filter((group) => group.options.length > 0) ?? [];
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -37,11 +44,21 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
               {placeholder}
             </option>
           )}
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
+          {groupedOptions.length > 0
+            ? groupedOptions.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))
+            : options.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
         </select>
         {error && <p className="text-sm text-error">{error}</p>}
       </div>

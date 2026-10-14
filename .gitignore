@@ -28,6 +28,8 @@ frontend/.env.production.local
 *.swo
 *~
 .DS_Store
+.goose/
+.alo/
 
 # Data
 data/
@@ -37,6 +39,9 @@ data/
 
 # Docker
 docker-compose.override.yml
+.bluegreen/
 
 # Misc
 *.log
+test-results/
+playwright-report/

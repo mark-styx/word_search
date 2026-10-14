@@ -2,8 +2,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use word_search_backend::api;
+use word_search_backend::auth;
 use word_search_backend::db::repository;
 use word_search_backend::discovery::advertise::MdnsAdvertiser;
+use word_search_backend::word_banks;
 
 #[tokio::main]
 async fn main() {
@@ -16,9 +18,10 @@ async fn main() {
         .unwrap_or_else(|_| "3001".into())
         .parse()
         .expect("Invalid PORT");
+    let host = std::env::var("HOST").unwrap_or_else(|_| "0.0.0.0".into());
 
-    let db_path = std::env::var("DATABASE_PATH")
-        .unwrap_or_else(|_| "./data/wordsearch.db".into());
+    let db_path = std::env::var("DATABASE_PATH").unwrap_or_else(|_| "./data/wordsearch.db".into());
+    let _ = auth::jwt_secret();
 
     // Initialize database
     let pool = repository::create_pool(&db_path)
@@ -30,6 +33,7 @@ async fn main() {
         .expect("Failed to run migrations");
 
     tracing::info!("Database initialized at {}", db_path);
+    word_banks::log_generator_status();
 
     // Start mDNS advertiser
     let mdns = match MdnsAdvertiser::new(port) {
@@ -48,10 +52,10 @@ async fn main() {
 
     let app = api::create_router(pool, rooms);
 
-    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], port));
-    tracing::info!("Server listening on {}", addr);
+    let bind_addr = format!("{}:{}", host, port);
+    tracing::info!("Server listening on {}", bind_addr);
 
-    let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+    let listener = tokio::net::TcpListener::bind(&bind_addr).await.unwrap();
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await

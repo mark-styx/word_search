@@ -16,6 +16,9 @@
   --color-border: #e5e7eb;
   --color-success: #10b981;
   --color-error: #ef4444;
+  --color-highlight: #3b82f6;
+  --color-highlight-soft: rgba(59, 130, 246, 0.2);
+  --color-highlight-strong: #2563eb;
 }
 
 @theme inline {
@@ -33,6 +36,9 @@
   --color-border: var(--color-border);
   --color-success: var(--color-success);
   --color-error: var(--color-error);
+  --color-highlight: var(--color-highlight);
+  --color-highlight-soft: var(--color-highlight-soft);
+  --color-highlight-strong: var(--color-highlight-strong);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -40,5 +46,42 @@
 body {
   background: var(--color-bg);
   color: var(--color-text);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  overscroll-behavior-y: contain;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.game-shell--interactive {
+  overscroll-behavior: contain;
+}
+
+.game-board-shell {
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.game-board,
+.game-board-cell {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.game-board--interactive {
+  touch-action: none;
+}
+
+@supports (padding: max(0px)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
 }

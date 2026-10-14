@@ -1,11 +1,11 @@
 // Shared data structures
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
-use chrono::{DateTime, Utc};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WordDirection {
     Horizontal,
@@ -49,7 +49,7 @@ pub struct Grid {
     pub placed_words: Vec<PlacedWord>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Difficulty {
     Easy,
@@ -70,10 +70,10 @@ impl Difficulty {
 
     pub fn word_count(&self) -> usize {
         match self {
-            Self::Easy => 6,
-            Self::Medium => 10,
-            Self::Hard => 15,
-            Self::Expert => 20,
+            Self::Easy => 8,
+            Self::Medium => 13,
+            Self::Hard => 18,
+            Self::Expert => 24,
         }
     }
 
@@ -92,31 +92,74 @@ impl Difficulty {
             Self::Easy => vec![Horizontal, Vertical],
             Self::Medium => vec![Horizontal, Vertical, DiagonalDownRight, DiagonalDownLeft],
             Self::Hard => vec![
-                Horizontal, Vertical, DiagonalDownRight, DiagonalDownLeft,
-                ReverseHorizontal, ReverseVertical,
+                Horizontal,
+                Vertical,
+                DiagonalDownRight,
+                DiagonalDownLeft,
+                ReverseHorizontal,
+                ReverseVertical,
             ],
             Self::Expert => vec![
-                Horizontal, Vertical, DiagonalDownRight, DiagonalDownLeft,
-                ReverseHorizontal, ReverseVertical,
-                ReverseDiagonalDownRight, ReverseDiagonalDownLeft,
+                Horizontal,
+                Vertical,
+                DiagonalDownRight,
+                DiagonalDownLeft,
+                ReverseHorizontal,
+                ReverseVertical,
+                ReverseDiagonalDownRight,
+                ReverseDiagonalDownLeft,
             ],
         }
     }
+
+    pub fn score_for_word(&self, word: &str) -> u32 {
+        let length = word.chars().count() as u32;
+        let short_word_bonus = ((12u32.saturating_sub(length) + 1) / 2) + 2;
+        short_word_bonus * self.score_multiplier()
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum WordTheme {
     Animals,
+    Cats,
+    Boating,
+    Camping,
+    RecipeIngredients,
     Sports,
     Food,
+    Fishing,
+    Pizza,
+    Snacks,
+    FastFood,
+    Bugs,
     Movies,
+    Cars,
+    Desert,
+    Mountains,
+    Ocean,
+    Weather,
+    Garden,
+    Farm,
+    ShinyThings,
+    Toys,
+    Space,
     Science,
     Geography,
     Technology,
     Music,
     History,
+    HomeRenovation,
+    LuxuryBrands,
     Nature,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum WordBankSource {
+    BuiltIn { theme: WordTheme },
+    Custom { id: Uuid },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -127,26 +170,63 @@ pub enum GameStatus {
     Finished,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GameFinishReason {
+    Completed,
+    Timeout,
+    Abandoned,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerState {
     pub id: Uuid,
     pub username: String,
     pub score: u32,
     pub is_host: bool,
+    #[serde(default)]
+    pub ready: bool,
+    pub highlight_color: String,
+    #[serde(default = "player_connected_default")]
+    pub connected: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameState {
     pub id: Uuid,
     pub grid: Option<Grid>,
-    pub theme: WordTheme,
+    pub theme: String,
+    pub word_bank_source: WordBankSource,
     pub difficulty: Difficulty,
     pub players: HashMap<Uuid, PlayerState>,
     pub found_words: HashMap<Uuid, Vec<String>>,
     pub status: GameStatus,
+    #[serde(default)]
+    pub finished_reason: Option<GameFinishReason>,
     pub started_at: Option<DateTime<Utc>>,
     pub time_limit: Option<Duration>,
     pub max_players: usize,
+    pub revision: u64,
+    pub updated_at: DateTime<Utc>,
+    #[serde(skip)]
+    pub word_claims: HashMap<String, WordClaim>,
+}
+
+#[derive(Debug, Clone)]
+pub struct WordClaim {
+    pub player_id: Uuid,
+    pub claimed_at: DateTime<Utc>,
+}
+
+impl GameState {
+    pub fn touch(&mut self) {
+        self.revision = self.revision.saturating_add(1);
+        self.updated_at = Utc::now();
+    }
+}
+
+fn player_connected_default() -> bool {
+    true
 }
 
 // ── WebSocket message protocol ──────────────────────────────────────────
@@ -163,9 +243,15 @@ pub enum ClientMessage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ServerMessage {
-    PlayerJoined { player: PlayerState },
-    PlayerLeft { player_id: Uuid },
-    PlayerReady { player_id: Uuid },
+    PlayerJoined {
+        player: PlayerState,
+    },
+    PlayerLeft {
+        player_id: Uuid,
+    },
+    PlayerReady {
+        player_id: Uuid,
+    },
     GameStarting {
         grid: Grid,
         words_to_find: Vec<String>,
@@ -178,6 +264,10 @@ pub enum ServerMessage {
     },
     GameFinished {
         rankings: Vec<PlayerState>,
+        reason: GameFinishReason,
+    },
+    GameStateSync {
+        game: serde_json::Value,
     },
     PlayerScoreUpdate {
         player_id: Uuid,
@@ -189,5 +279,26 @@ pub enum ServerMessage {
         message: String,
         timestamp: DateTime<Utc>,
     },
-    Error { message: String },
+    Error {
+        message: String,
+    },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Difficulty;
+
+    #[test]
+    fn shorter_words_score_more_than_longer_words() {
+        let difficulty = Difficulty::Medium;
+
+        assert!(difficulty.score_for_word("CAR") > difficulty.score_for_word("ENGINE"));
+        assert!(difficulty.score_for_word("STAR") > difficulty.score_for_word("SATELLITE"));
+    }
+
+    #[test]
+    fn score_for_word_has_a_minimum_floor() {
+        let difficulty = Difficulty::Expert;
+        assert_eq!(difficulty.score_for_word("CONSTELLATION"), 10);
+    }
 }

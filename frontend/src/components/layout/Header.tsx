@@ -20,9 +20,9 @@ export default function Header() {
   const { theme, setTheme } = useTheme();
   const [themeOpen, setThemeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const themeRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const authenticated = isAuthenticated();
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -34,13 +34,17 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  useEffect(() => {
+    setAuthenticated(isAuthenticated());
+  }, [pathname]);
+
   const hideHeader = pathname === "/login" || pathname === "/register";
 
   if (hideHeader) return null;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-bg/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+    <header className="sticky top-0 z-40 border-b border-border bg-bg/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+      <div className="mx-auto flex min-h-14 max-w-5xl items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 font-bold text-lg text-text">
           <Search size={22} className="text-primary" />
@@ -77,7 +81,7 @@ export default function Header() {
               <Palette size={18} />
             </button>
             {themeOpen && (
-              <div className="absolute right-0 top-full mt-1 w-40 rounded-lg border border-border bg-bg shadow-lg py-1 z-50">
+              <div className="absolute right-0 top-full z-50 mt-1 max-h-80 w-44 overflow-y-auto rounded-lg border border-border bg-bg py-1 shadow-lg">
                 {themes.map((t) => (
                   <button
                     key={t.id}
@@ -119,7 +123,7 @@ export default function Header() {
                     onClick={() => { logout(); setMenuOpen(false); }}
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-error hover:bg-bg-secondary"
                   >
-                    <LogOut size={14} /> Sign Out
+                    <LogOut size={14} /> Switch Player
                   </button>
                 </div>
               )}

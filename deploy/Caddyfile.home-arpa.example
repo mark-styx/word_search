@@ -1,0 +1,11 @@
+{
+	auto_https off
+}
+
+http://wordsearch.home.arpa {
+	reverse_proxy 127.0.0.1:3089
+}
+
+http://wordsearch-preview.home.arpa {
+	reverse_proxy 127.0.0.1:4189
+}

@@ -5,16 +5,18 @@ test.describe("Leaderboard page", () => {
   test("shows leaderboard heading", async ({ page }) => {
     await page.goto("/leaderboard");
 
-    await expect(page.getByRole("heading", { name: "Leaderboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Leaderboard", exact: true })).toBeVisible();
+    await expect(
+      page.getByText(/Leaderboard Views|No games played yet\. Be the first!/).first()
+    ).toBeVisible();
   });
 
   test("shows empty state or entries", async ({ page }) => {
     await page.goto("/leaderboard");
 
     // Either empty state or leaderboard entries
-    const emptyState = page.getByText("No games played yet");
-    const entries = page.locator("[class*='Card']").filter({ hasText: "pts" });
-    await expect(emptyState.or(entries.first())).toBeVisible({ timeout: 10_000 });
+    const main = page.locator("main");
+    await expect(main.getByText(/No games played yet|No leaderboard data yet|pts/).first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("pagination controls are present", async ({ page }) => {
@@ -65,7 +67,8 @@ test.describe("Profile page", () => {
 
     await page.goto("/profile");
 
-    await expect(page.getByText("Visual Theme")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Visual Preferences")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByLabel("App Theme")).toBeVisible();
   });
 
   test("shows stats section for new user", async ({ page }) => {

@@ -5,4 +5,5 @@ pub mod discovery;
 pub mod game;
 pub mod models;
 pub mod puzzles;
+pub mod word_banks;
 pub mod ws;

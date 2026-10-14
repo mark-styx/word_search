@@ -1,5 +1,12 @@
 import { test, expect } from "@playwright/test";
-import { registerAndAuth, uniqueSuffix, createGameApi } from "./helpers";
+import {
+  registerAndAuth,
+  uniqueSuffix,
+  createGameApi,
+  listWordBanksApi,
+  createGameWithWordBankApi,
+  startGameApi,
+} from "./helpers";
 
 test.describe("Lobby page", () => {
   test("redirects to login when unauthenticated", async ({ page }) => {
@@ -53,8 +60,8 @@ test.describe("Lobby page", () => {
     await page.getByRole("button", { name: /Create Game/ }).click();
     await expect(page.getByRole("heading", { name: "Create Game" })).toBeVisible();
 
-    // Should have theme and difficulty selects
-    await expect(page.getByLabel("Word Theme")).toBeVisible();
+    // Should have word bank and difficulty selects
+    await expect(page.getByLabel("Word Bank")).toBeVisible();
     await expect(page.getByLabel("Difficulty")).toBeVisible();
 
     // Click create (exact match to avoid "Create Game" button match)
@@ -99,5 +106,88 @@ test.describe("Lobby page", () => {
 
     await expect(page.getByText("Share Server")).toBeVisible();
     await expect(page.getByText("Scan to open this server")).toBeVisible();
+  });
+
+  test("can generate a custom word bank and use it in a new game", async ({ page }) => {
+    const suffix = uniqueSuffix();
+    await registerAndAuth(page, `e2e_generate_${suffix}`, "testpass123");
+
+    await page.goto("/lobby");
+    await page.getByRole("button", { name: /Generate Word Bank/ }).click();
+
+    await expect(page.getByRole("heading", { name: "Generate Word Bank" })).toBeVisible();
+    await page.getByLabel("What should the bank be about?").fill("ocean animals");
+    await page.getByRole("button", { name: "Generate", exact: true }).click();
+
+    await expect(page.getByText("Word bank request sent. I’ll add it to the list when it finishes.")).toBeVisible();
+    await expect(page.getByText('"Ocean Pals" is ready to use.')).toBeVisible({ timeout: 15_000 });
+
+    await expect(page.getByRole("heading", { name: "Custom Word Banks" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Ocean Pals" }).first()).toBeVisible();
+    await expect(page.getByText("Coverage 0%.").first()).toBeVisible();
+
+    await expect(page.getByRole("heading", { name: "Create Game" })).toBeVisible();
+    await expect(page.getByLabel("Word Bank")).toHaveValue(/custom:/);
+    await page.getByRole("button", { name: "Create", exact: true }).click();
+
+    await expect(page).toHaveURL(/\/game\//, { timeout: 15_000 });
+    await expect(page.locator("main").getByText("Ocean Pals")).toBeVisible();
+  });
+
+  test("custom word bank coverage increases and can trigger a refill", async ({ page }) => {
+    const suffix = uniqueSuffix();
+    const token = await registerAndAuth(page, `e2e_refill_${suffix}`, "testpass123");
+    let bankId = "";
+
+    await page.goto("/lobby");
+    await page.getByRole("button", { name: /Generate Word Bank/ }).click();
+    await page.getByLabel("What should the bank be about?").fill("friendly ocean adventure");
+    await page.getByRole("button", { name: "Generate", exact: true }).click();
+    await expect(page.getByText('"Ocean Pals" is ready to use.')).toBeVisible({ timeout: 15_000 });
+
+    await expect
+      .poll(async () => {
+        const banks = await listWordBanksApi(token);
+        bankId =
+          banks.find((bank: { label: string; source: string }) => bank.label === "Ocean Pals" && bank.source === "custom")?.id ?? "";
+        return bankId;
+      }, { timeout: 15_000 })
+      .not.toBe("");
+
+    for (let i = 0; i < 4; i += 1) {
+      const gameId = await createGameWithWordBankApi(token, bankId, "easy");
+      await startGameApi(token, gameId);
+    }
+
+    await expect
+      .poll(async () => {
+        const banks = await listWordBanksApi(token);
+        const bank = banks.find((entry: { id: string }) => entry.id === bankId);
+        return bank
+          ? {
+              used: bank.used_words_count,
+              total: bank.total_words,
+              coverage: bank.coverage_percent,
+              extensionState: bank.extension_state,
+            }
+          : null;
+      }, { timeout: 20_000 })
+      .toMatchObject({
+        used: expect.any(Number),
+        total: expect.any(Number),
+        coverage: expect.any(Number),
+        extensionState: expect.any(String),
+      });
+
+    const banks = await listWordBanksApi(token);
+    const bank = banks.find((entry: { id: string }) => entry.id === bankId);
+    expect(bank).toBeTruthy();
+    expect(bank.used_words_count).toBeGreaterThan(0);
+    expect(bank.coverage_percent).toBeGreaterThan(0);
+    expect(bank.total_words).toBeGreaterThanOrEqual(48);
+
+    await page.goto("/lobby");
+    await expect(page.getByRole("heading", { name: "Ocean Pals" }).first()).toBeVisible();
+    await expect(page.getByText(/unique words used/).first()).toBeVisible();
   });
 });

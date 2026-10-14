@@ -14,8 +14,11 @@ test.describe("Home page", () => {
     const main = page.locator("main");
     await expect(main.getByRole("heading", { name: "Multiplayer", exact: true })).toBeVisible();
     await expect(main.getByRole("heading", { name: "Real-Time", exact: true })).toBeVisible();
-    await expect(main.getByRole("heading", { name: "10 Themes", exact: true })).toBeVisible();
+    await expect(main.getByRole("heading", { name: "31 Themes", exact: true })).toBeVisible();
     await expect(main.getByRole("heading", { name: "Leaderboard", exact: true })).toBeVisible();
+    await expect(
+      main.getByText(/No leaderboard data yet|Leaderboard Snapshot/).first()
+    ).toBeVisible();
   });
 
   test("header shows Login and Sign Up when unauthenticated", async ({ page }) => {

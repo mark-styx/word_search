@@ -1,4 +1,4 @@
-FROM rust:1.82-bookworm AS builder
+FROM rust:1.88-bookworm AS builder
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 # Cache deps by building a dummy lib
@@ -15,10 +15,9 @@ COPY migrations ./migrations
 RUN mkdir -p /app/data
 
 ENV DATABASE_PATH=/app/data/wordsearch.db
-ENV PORT=3001
+ENV PORT=3099
 ENV HOST=0.0.0.0
-ENV JWT_SECRET=change-me-in-production
 ENV RUST_LOG=info
 
-EXPOSE 3001
+EXPOSE 3099
 CMD ["./server"]

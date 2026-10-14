@@ -4,28 +4,36 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: word-search-backend
-    network_mode: host
     environment:
       - DATABASE_PATH=/app/data/wordsearch.db
-      - PORT=3001
+      - PORT=3099
       - HOST=0.0.0.0
-      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_SECRET=${JWT_SECRET:-}
       - RUST_LOG=${RUST_LOG:-info}
     volumes:
       - backend-data:/app/data
+    ports:
+      - "3099:3099"
     restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_PORT: 3099
     container_name: word-search-frontend
-    network_mode: host
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
+      - PORT=3089
+      - HOSTNAME=0.0.0.0
+      - INTERNAL_API_BASE_URL=http://backend:3099
+      - NEXT_PUBLIC_API_PORT=3099
     depends_on:
       - backend
+    ports:
+      - "3089:3089"
     restart: unless-stopped
 
 volumes:
   backend-data:
+    name: word_search_backend-data

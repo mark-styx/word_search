@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ${STACK_BACKEND_CONTAINER}
+    environment:
+      - DATABASE_PATH=/app/data/wordsearch.db
+      - PORT=${BACKEND_PORT}
+      - HOST=0.0.0.0
+      - FRONTEND_PORT=${FRONTEND_PORT}
+      - PUBLIC_FRONTEND_URL=${PUBLIC_FRONTEND_URL}
+      - JWT_SECRET=${JWT_SECRET:-}
+      - RUST_LOG=${RUST_LOG:-info}
+    volumes:
+      - backend-data:/app/data
+    ports:
+      - "${BACKEND_PORT}:${BACKEND_PORT}"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_PORT: ${BACKEND_PORT}
+    container_name: ${STACK_FRONTEND_CONTAINER}
+    environment:
+      - PORT=${FRONTEND_PORT}
+      - HOSTNAME=0.0.0.0
+      - INTERNAL_API_BASE_URL=http://backend:${BACKEND_PORT}
+      - NEXT_PUBLIC_API_PORT=${BACKEND_PORT}
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT}:${FRONTEND_PORT}"
+    restart: unless-stopped
+
+volumes:
+  backend-data:
+    name: ${STACK_VOLUME_NAME}

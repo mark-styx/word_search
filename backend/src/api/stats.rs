@@ -36,6 +36,11 @@ struct UserStatsResponse {
     total_score: i64,
     best_single_game_score: i64,
     total_words_found: i64,
+    contested_words_won: i64,
+    contested_words_lost: i64,
+    closest_contest_ms: Option<i64>,
+    fastest_word_find_ms: Option<i64>,
+    average_word_find_ms: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -56,8 +61,7 @@ struct HistoryResponse {
 }
 
 pub fn routes() -> Router {
-    Router::new()
-        .route("/leaderboard", get(leaderboard))
+    Router::new().route("/leaderboard", get(leaderboard))
 }
 
 pub fn protected_routes() -> Router {
@@ -77,7 +81,9 @@ async fn leaderboard(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let total = entries.len() as i64; // simplified; real impl would COUNT
+    let total = repository::get_leaderboard_count(&pool)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(LeaderboardResponse {
         entries: entries
@@ -108,6 +114,11 @@ async fn my_stats(
         total_score: stats.total_score,
         best_single_game_score: stats.best_single_game_score,
         total_words_found: stats.total_words_found,
+        contested_words_won: stats.contested_words_won,
+        contested_words_lost: stats.contested_words_lost,
+        closest_contest_ms: stats.closest_contest_ms,
+        fastest_word_find_ms: stats.fastest_word_find_ms,
+        average_word_find_ms: stats.average_word_find_ms,
     }))
 }
 
@@ -123,7 +134,9 @@ async fn my_history(
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let total = rows.len() as i64;
+    let total = repository::get_game_history_count(&pool, &auth_user.user_id)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(Json(HistoryResponse {
         entries: rows
